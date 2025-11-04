@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -11,9 +10,11 @@ const DefaultIcon = L.icon({
   iconUrl,
   shadowUrl: iconShadowUrl,
   iconSize: [25, 41],
-  iconAnchor: [12, 41]
+  iconAnchor: [12, 41],
 });
 
+// Apply default icon globally
+// @ts-ignore
 L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapPickerProps {
@@ -22,39 +23,11 @@ interface MapPickerProps {
   initialLng?: number;
 }
 
-function LocationMarker({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  const [position, setPosition] = useState<[number, number] | null>(null);
+export default function MapPicker({ onLocationSelect, initialLat = 28.6139, initialLng = 77.209 }: MapPickerProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRef = useRef<L.Marker | null>(null);
 
-  const map = useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng;
-      setPosition([lat, lng]);
-      onLocationSelect(lat, lng);
-    },
-  });
-
-  useEffect(() => {
-    map.locate();
-  }, [map]);
-
-  useEffect(() => {
-    const handleLocationFound = (e: L.LocationEvent) => {
-      const { lat, lng } = e.latlng;
-      setPosition([lat, lng]);
-      map.flyTo([lat, lng], 13);
-      onLocationSelect(lat, lng);
-    };
-
-    map.on('locationfound', handleLocationFound);
-    return () => {
-      map.off('locationfound', handleLocationFound);
-    };
-  }, [map, onLocationSelect]);
-
-  return position === null ? null : <Marker position={position} />;
-}
-
-export default function MapPicker({ onLocationSelect, initialLat = 28.6139, initialLng = 77.2090 }: MapPickerProps) {
   const handleLocationSelect = async (lat: number, lng: number) => {
     try {
       const response = await fetch(
@@ -69,14 +42,55 @@ export default function MapPicker({ onLocationSelect, initialLat = 28.6139, init
     }
   };
 
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current).setView([initialLat, initialLng], 13);
+    mapRef.current = map;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const onClick = async (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+      }
+      await handleLocationSelect(lat, lng);
+    };
+
+    map.on('click', onClick);
+
+    // Try to locate user
+    map.locate?.();
+    const onLocationFound = async (e: L.LocationEvent) => {
+      const { lat, lng } = e.latlng;
+      map.flyTo([lat, lng], 13);
+      if (markerRef.current) {
+        markerRef.current.setLatLng([lat, lng]);
+      } else {
+        markerRef.current = L.marker([lat, lng]).addTo(map);
+      }
+      await handleLocationSelect(lat, lng);
+    };
+    map.on('locationfound', onLocationFound);
+
+    return () => {
+      map.off('click', onClick);
+      map.off('locationfound', onLocationFound);
+      map.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+    };
+  }, [initialLat, initialLng]);
+
   return (
     <div className="h-[400px] w-full rounded-lg overflow-hidden border border-border">
-      <MapContainer center={[initialLat, initialLng]} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-        <>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <LocationMarker onLocationSelect={handleLocationSelect} />
-        </>
-      </MapContainer>
+      <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
     </div>
   );
 }
