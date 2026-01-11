@@ -209,17 +209,11 @@ All colors and styles are defined in `src/index.css` and `tailwind.config.ts`.
 
 ## 🚢 Deployment
 
-### Deploy to Lovable (Recommended)
-1. Open your project in [Lovable](https://lovable.dev)
-2. Click the **Publish** button (top right on desktop, bottom right on mobile)
-3. Your app will be live with a `.lovable.app` domain
-
 ### Custom Domain
 1. Go to Project → Settings → Domains
 2. Click "Connect Domain"
 3. Follow the DNS configuration steps
 
-(Requires a paid Lovable plan)
 
 ## 🛠️ Development
 
@@ -298,7 +292,6 @@ This is a demo project showcasing the capabilities of Lovable for building full-
 
 ## 📚 Learn More
 
-- [Lovable Documentation](https://docs.lovable.dev)
 - [Supabase Documentation](https://supabase.com/docs)
 - [React Leaflet Documentation](https://react-leaflet.js.org)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
@@ -327,4 +320,4 @@ This project is open source and available for educational and demonstration purp
 
 ---
 
-**Built with ❤️ using [Lovable](https://lovable.dev)**
+
